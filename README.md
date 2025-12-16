@@ -30,11 +30,14 @@ src/
 │   │   ├── TodoController.ts # REST API controller
 │   │   └── TodoRoutes.ts     # Route definitions
 │   └── outbound/             # Output adapters (Database, external services)
-│       └── InMemoryTodoRepository.ts
+│       ├── InMemoryTodoRepository.ts # In-memory implementation
+│       └── MongoTodoRepository.ts    # MongoDB implementation
 │
 └── infrastructure/            # Application setup and DI
+    ├── Config.ts             # Configuration management
     ├── DependencyContainer.ts # Dependency injection
-    └── ExpressApp.ts         # Express app configuration
+    ├── ExpressApp.ts         # Express app configuration
+    └── MongoDBClient.ts      # MongoDB connection manager
 ```
 
 ### Key Concepts
@@ -50,12 +53,44 @@ src/
 
 - Node.js (v16 or higher)
 - npm or yarn
+- MongoDB (optional - can use in-memory storage for development)
 
 ### Installation
 
 ```bash
 # Install dependencies
 npm install
+```
+
+### Configuration
+
+The application supports both **in-memory** storage and **MongoDB** persistence. Configuration is managed through environment variables.
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+2. Configure your environment variables in `.env`:
+
+**Option 1: In-Memory Storage (Default for development)**
+```env
+USE_IN_MEMORY_DB=true
+PORT=3000
+```
+
+**Option 2: MongoDB Storage**
+```env
+USE_IN_MEMORY_DB=false
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB_NAME=todo-app
+PORT=3000
+```
+
+For MongoDB Atlas:
+```env
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net
+MONGO_DB_NAME=todo-app
 ```
 
 ### Running the Application
@@ -72,6 +107,8 @@ npm start
 ```
 
 The server will start at `http://localhost:3000`
+
+**Note**: If using MongoDB, make sure MongoDB is running before starting the application.
 
 ## 📚 API Endpoints
 
@@ -163,16 +200,37 @@ curl -X DELETE http://localhost:3000/api/todos/{id}
 3. A todo cannot be completed twice
 4. A pending todo cannot be reopened
 
-## 🔄 Adding a New Adapter
+## 🔄 Swapping Adapters
 
-One of the main benefits of hexagonal architecture is the ability to easily swap implementations. Here's how to add a database adapter:
+One of the main benefits of hexagonal architecture is the ability to easily swap implementations. This project includes **two repository implementations**:
 
-### Example: Adding MongoDB Repository
+### 1. In-Memory Repository
+- Perfect for development and testing
+- No external dependencies required
+- Data is lost when the application restarts
 
-1. Create the adapter:
+### 2. MongoDB Repository
+- Persistent storage
+- Production-ready
+- Requires MongoDB connection
+
+**The active adapter is selected automatically** based on the `USE_IN_MEMORY_DB` environment variable. No code changes are needed!
+
 ```typescript
-// src/adapters/outbound/MongoTodoRepository.ts
-export class MongoTodoRepository implements TodoRepository {
+// src/infrastructure/DependencyContainer.ts
+if (this._config.useInMemoryDb) {
+  this._todoRepository = new InMemoryTodoRepository();
+} else {
+  this._todoRepository = new MongoTodoRepository(this._mongoClient);
+}
+```
+
+### Adding Another Adapter (e.g., PostgreSQL)
+
+1. Create a new adapter:
+```typescript
+// src/adapters/outbound/PostgresTodoRepository.ts
+export class PostgresTodoRepository implements TodoRepository {
   // Implement all TodoRepository methods
   async save(todo: Todo): Promise<Todo> { /* ... */ }
   async findById(id: string): Promise<Todo | null> { /* ... */ }
@@ -180,16 +238,8 @@ export class MongoTodoRepository implements TodoRepository {
 }
 ```
 
-2. Update the dependency container:
-```typescript
-// src/infrastructure/DependencyContainer.ts
-// Replace:
-this._todoRepository = new InMemoryTodoRepository();
-// With:
-this._todoRepository = new MongoTodoRepository();
-```
-
-That's it! No changes needed to the domain or application layers.
+2. Update the dependency container to include the new option
+3. That's it! No changes needed to the domain or application layers.
 
 ## 🏛️ Design Principles Applied
 
@@ -203,6 +253,8 @@ That's it! No changes needed to the domain or application layers.
 - **TypeScript**: Type-safe JavaScript
 - **Express**: Web framework for the REST API
 - **Node.js**: Runtime environment
+- **MongoDB**: NoSQL database (optional, with in-memory fallback)
+- **dotenv**: Environment variable management
 
 ## 🧩 Benefits of This Architecture
 

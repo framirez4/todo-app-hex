@@ -14,7 +14,10 @@ import { CompleteTodo } from '../application/use-cases/CompleteTodo';
 import { DeleteTodo } from '../application/use-cases/DeleteTodo';
 
 import { InMemoryTodoRepository } from '../adapters/outbound/InMemoryTodoRepository';
+import { MongoTodoRepository } from '../adapters/outbound/MongoTodoRepository';
 import { TodoController } from '../adapters/inbound/TodoController';
+import { Config } from './Config';
+import { MongoDBClient } from './MongoDBClient';
 
 /**
  * Dependency Injection Container
@@ -23,6 +26,8 @@ import { TodoController } from '../adapters/inbound/TodoController';
 export class DependencyContainer {
   private static instance: DependencyContainer;
   
+  private _config: Config;
+  private _mongoClient?: MongoDBClient;
   private _todoRepository: TodoRepository;
   private _createTodoUseCase: CreateTodoUseCase;
   private _getTodoUseCase: GetTodoUseCase;
@@ -33,8 +38,22 @@ export class DependencyContainer {
   private _todoController: TodoController;
 
   private constructor() {
-    // Initialize repository (outbound adapter)
-    this._todoRepository = new InMemoryTodoRepository();
+    // Load configuration
+    this._config = Config.getInstance();
+    this._config.validate();
+
+    // Initialize repository (outbound adapter) based on configuration
+    if (this._config.useInMemoryDb) {
+      console.log('Using In-Memory repository');
+      this._todoRepository = new InMemoryTodoRepository();
+    } else {
+      console.log('Using MongoDB repository');
+      this._mongoClient = MongoDBClient.getInstance(
+        this._config.mongoUri,
+        this._config.mongoDbName
+      );
+      this._todoRepository = new MongoTodoRepository(this._mongoClient);
+    }
 
     // Initialize use cases (application layer)
     this._createTodoUseCase = new CreateTodo(this._todoRepository);
@@ -60,6 +79,32 @@ export class DependencyContainer {
       DependencyContainer.instance = new DependencyContainer();
     }
     return DependencyContainer.instance;
+  }
+
+  /**
+   * Initialize async resources (like database connections)
+   */
+  public async initialize(): Promise<void> {
+    if (this._mongoClient) {
+      await this._mongoClient.connect();
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  public async cleanup(): Promise<void> {
+    if (this._mongoClient) {
+      await this._mongoClient.disconnect();
+    }
+  }
+
+  get config(): Config {
+    return this._config;
+  }
+
+  get mongoClient(): MongoDBClient | undefined {
+    return this._mongoClient;
   }
 
   get todoRepository(): TodoRepository {
