@@ -254,7 +254,7 @@ export class PostgresTodoRepository implements TodoRepository {
 - **Express**: Web framework for the REST API
 - **Node.js**: Runtime environment
 - **MongoDB**: NoSQL database (optional, with in-memory fallback)
-- **dotenv**: Environment variable management
+- **dotenvx**: Environment variable management
 
 ## 🧩 Benefits of This Architecture
 

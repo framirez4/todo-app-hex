@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import dotenv from '@dotenvx/dotenvx';
 
 // Load environment variables from .env file
 dotenv.config();
