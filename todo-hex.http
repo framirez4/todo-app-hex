@@ -1,0 +1,44 @@
+@baseUrl = http://localhost:3000/api
+
+# @name createTodoUseCase
+POST {{baseUrl}}/todos
+content-type: application/json
+
+{
+  "title": "New Todo Item",
+  "description": "This is a new todo item."
+}
+
+
+###
+
+@todoId = {{createTodoUseCase.response.body.id}}
+
+# @name listTodosUseCase
+GET {{baseUrl}}/todos
+
+###
+
+# @name getTodoUseCase
+GET {{baseUrl}}/todos/{{todoId}}
+
+###
+
+# @name updateTodoUseCase
+PUT {{baseUrl}}/todos/{{todoId}}
+content-type: application/json
+
+{
+  "title": "Updated Todo Item",
+  "description": "This is an updated description."
+}
+
+###
+
+# @name completeTodoUseCase
+PATCH {{baseUrl}}/todos/{{todoId}}/complete
+
+###
+
+# @name deleteTodoUseCase
+DELETE {{baseUrl}}/todos/{{todoId}}
