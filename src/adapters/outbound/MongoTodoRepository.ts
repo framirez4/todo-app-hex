@@ -28,7 +28,13 @@ export class MongoTodoRepository implements TodoRepository {
   constructor(mongoClient: MongoDBClient) {
     const db = mongoClient.getDatabase();
     this.collection = db.collection<TodoDocument>(this.collectionName);
-    this.ensureIndexes();
+  }
+
+  /**
+   * Initialize indexes (call after construction)
+   */
+  public async init(): Promise<void> {
+    await this.ensureIndexes();
   }
 
   /**

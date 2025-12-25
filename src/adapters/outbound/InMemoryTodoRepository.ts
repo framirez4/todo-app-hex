@@ -7,6 +7,10 @@ import { TodoRepository } from '../../application/ports/TodoRepository';
 export class InMemoryTodoRepository implements TodoRepository {
   private todos: Map<string, TodoProps> = new Map();
 
+  async init(): Promise<void> {
+    // No initialization needed for in-memory repository
+  }
+
   async save(todo: Todo): Promise<Todo> {
     const todoData = todo.toObject();
     this.todos.set(todoData.id!, todoData);

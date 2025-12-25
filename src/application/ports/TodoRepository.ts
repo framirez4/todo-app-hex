@@ -5,6 +5,7 @@ import { Todo } from '../../domain/entities/Todo';
  * This defines what the application needs from the persistence layer
  */
 export interface TodoRepository {
+  init(): Promise<void>;
   save(todo: Todo): Promise<Todo>;
   findById(id: string): Promise<Todo | null>;
   findAll(): Promise<Todo[]>;

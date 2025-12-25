@@ -28,14 +28,14 @@ export class DependencyContainer {
   
   private _config: Config;
   private _mongoClient?: MongoDBClient;
-  private _todoRepository: TodoRepository;
-  private _createTodoUseCase: CreateTodoUseCase;
-  private _getTodoUseCase: GetTodoUseCase;
-  private _listTodosUseCase: ListTodosUseCase;
-  private _updateTodoUseCase: UpdateTodoUseCase;
-  private _completeTodoUseCase: CompleteTodoUseCase;
-  private _deleteTodoUseCase: DeleteTodoUseCase;
-  private _todoController: TodoController;
+  private _todoRepository?: TodoRepository;
+  private _createTodoUseCase?: CreateTodoUseCase;
+  private _getTodoUseCase?: GetTodoUseCase;
+  private _listTodosUseCase?: ListTodosUseCase;
+  private _updateTodoUseCase?: UpdateTodoUseCase;
+  private _completeTodoUseCase?: CompleteTodoUseCase;
+  private _deleteTodoUseCase?: DeleteTodoUseCase;
+  private _todoController?: TodoController;
 
   private constructor() {
     // Load configuration
@@ -45,16 +45,27 @@ export class DependencyContainer {
     // Initialize repository (outbound adapter) based on configuration
     if (this._config.useInMemoryDb) {
       console.log('Using In-Memory repository');
-      this._todoRepository = new InMemoryTodoRepository();
     } else {
       console.log('Using MongoDB repository');
       this._mongoClient = MongoDBClient.getInstance(
         this._config.mongoUri,
         this._config.mongoDbName
       );
-      this._todoRepository = new MongoTodoRepository(this._mongoClient);
+      // Repository and use cases will be initialized after connection in initialize()
     }
+  }
 
+  public static getInstance(): DependencyContainer {
+    if (!DependencyContainer.instance) {
+      DependencyContainer.instance = new DependencyContainer();
+    }
+    return DependencyContainer.instance;
+  }
+
+  private initializeUseCases(): void {
+    if (!this._todoRepository) {
+      throw new Error('Repository must be initialized before use cases.');
+    }
     // Initialize use cases (application layer)
     this._createTodoUseCase = new CreateTodo(this._todoRepository);
     this._getTodoUseCase = new GetTodo(this._todoRepository);
@@ -74,20 +85,24 @@ export class DependencyContainer {
     );
   }
 
-  public static getInstance(): DependencyContainer {
-    if (!DependencyContainer.instance) {
-      DependencyContainer.instance = new DependencyContainer();
-    }
-    return DependencyContainer.instance;
-  }
-
   /**
    * Initialize async resources (like database connections)
    */
   public async initialize(): Promise<void> {
-    if (this._mongoClient) {
+    if (this._config.useInMemoryDb) {
+      this._todoRepository = new InMemoryTodoRepository();
+    } else if (this._mongoClient) {
       await this._mongoClient.connect();
+      // Now that connected, create repository and use cases
+      this._todoRepository = new MongoTodoRepository(this._mongoClient);
     }
+
+    if (!this._todoRepository) {
+      throw new Error('Failed to initialize TodoRepository.');
+    }
+    
+    await this._todoRepository.init();
+    this.initializeUseCases();
   }
 
   /**
@@ -108,34 +123,58 @@ export class DependencyContainer {
   }
 
   get todoRepository(): TodoRepository {
+    if (!this._todoRepository) {
+      throw new Error('Repository not initialized. Call initialize() first.');
+    }
     return this._todoRepository;
   }
 
   get createTodoUseCase(): CreateTodoUseCase {
+    if (!this._createTodoUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._createTodoUseCase;
   }
 
   get getTodoUseCase(): GetTodoUseCase {
+    if (!this._getTodoUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._getTodoUseCase;
   }
 
   get listTodosUseCase(): ListTodosUseCase {
+    if (!this._listTodosUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._listTodosUseCase;
   }
 
   get updateTodoUseCase(): UpdateTodoUseCase {
+    if (!this._updateTodoUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._updateTodoUseCase;
   }
 
   get completeTodoUseCase(): CompleteTodoUseCase {
+    if (!this._completeTodoUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._completeTodoUseCase;
   }
 
   get deleteTodoUseCase(): DeleteTodoUseCase {
+    if (!this._deleteTodoUseCase) {
+      throw new Error('Use cases not initialized. Call initialize() first.');
+    }
     return this._deleteTodoUseCase;
   }
 
   get todoController(): TodoController {
+    if (!this._todoController) {
+      throw new Error('Controller not initialized. Call initialize() first.');
+    }
     return this._todoController;
   }
 }
